@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+:root {
+  --primary: #CC092F;
+  --secondary: #004481;
+  --bg: #F5F5F5;
+  --text-dark: #2C2C2C;
+  --white: #FFFFFF;
+  font-family: "Inter", system-ui, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-dark);
+}
+
+.header {
+  background-color: #e60000;
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  text-align: center;
+  padding: 0 20px;
+  font-family: 'Bebas Neue', cursive !important;
+}
+
+.project-name {
+  font-family: 'Bebas Neue', cursive !important;
+  font-size: 80px;
+  margin: 0;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+}
+
+.slogan {
+  font-size: 24px;
+  margin-top: 10px;
+  opacity: 0.9;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.brand span {
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+/* Main container */
+.container {
+  max-width: 900px;
+  margin: 60px auto;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Search box */
+.search-box {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  background: var(--white);
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.search-box input {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.search-box input:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(204, 9, 47, 0.2);
+}
+
+.search-box button {
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  padding: 0 22px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-box button:hover {
+  background: #e02448;
+}
+/* Seção de Dicas de Segurança */
+.tips-section {
+  margin-top: 60px;
+  text-align: left;
+}
+
+.tips-section h2 {
+  color: var(--primary);
+  font-size: 1.6rem;
+  margin-bottom: 20px;
+  font-weight: 700;
+}
+
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.tip-card {
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  padding: 18px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tip-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.tip-card h3 {
+  color: var(--primary);
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.tip-card p {
+  color: #444;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
