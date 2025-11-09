@@ -1,3 +1,3 @@
 # SafeDial_A3
 
-Entrega do Backend foi entregue junto ao banco de dados por ja estar integrado.
+Entrega do Backend foi realizada junto ao banco de dados por ja estar integrado.
