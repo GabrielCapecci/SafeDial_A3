@@ -1,18 +1,11 @@
-const mysql = require('mysql2');
+// backend/db.js
+import mysql from "mysql2";
 
-const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'senha',
-  database: 'safedial'
+const db = mysql.createPool({
+  host: "localhost",
+  user: "root",     // coloque seu usuário do MySQL
+  password: "Biel10403923@",     // coloque sua senha do MySQL
+  database: "safedial"
 });
 
-connection.connect((err) => {
-  if (err) {
-    console.error('❌ Erro ao conectar ao MySQL:', err);
-  } else {
-    console.log('✅ Conectado ao MySQL (SafeDial) com sucesso!');
-  }
-});
-
-module.exports = connection;
+export default db;
