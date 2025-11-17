@@ -23,9 +23,9 @@ app.get("/api/numbers/:phone", async (req, res) => {
     const phoneNorm = normalizePhone(phoneParam);
 
     const [rows] = await db.query("SELECT * FROM numbers");
-    if (!rows) throw new Error("Nenhum dado retornado da tabela numbers.");
 
     const found = rows.find(r => normalizePhone(r.phone) === phoneNorm);
+
     if (!found) {
       return res.json({
         status: "desconhecido",
@@ -49,7 +49,7 @@ app.get("/api/numbers/:phone", async (req, res) => {
 });
 
 // ----------------------------------------------------
-// 2) ENVIAR REPORT / DENÚNCIA (POST /api/report)
+// 2) ENVIAR REPORT (POST /api/report)
 // ----------------------------------------------------
 app.post("/api/report", async (req, res) => {
   try {
@@ -59,14 +59,12 @@ app.post("/api/report", async (req, res) => {
     const phoneNorm = normalizePhone(phone);
     const date = new Date();
 
-    // Inserir na tabela reports
     await db.query("INSERT INTO reports (phone, description, date) VALUES (?, ?, ?)", [
       phoneNorm,
       description || "",
       date
     ]);
 
-    // Atualizar ou inserir na tabela numbers
     await db.query(
       `
       INSERT INTO numbers (phone, bank, status, reports, lastUpdate)
@@ -87,9 +85,10 @@ app.post("/api/report", async (req, res) => {
 });
 
 // ----------------------------------------------------
-// 3) SYNC DO ADMIN (POST /api/sync-official)
+// 3) SYNC DO ADMIN (POST /api/sync-oficial)
+// (corrigido para "oficial" com 1 F)
 // ----------------------------------------------------
-app.post("/api/sync-official", async (req, res) => {
+app.post("/api/sync-oficial", async (req, res) => {
   try {
     const { phone, bank } = req.body;
     if (!phone) return res.status(400).json({ error: "phone required" });
@@ -111,12 +110,16 @@ app.post("/api/sync-official", async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    console.error("Erro POST /sync-official:", err);
+    console.error("Erro POST /sync-oficial:", err);
     return res.status(500).json({ error: "server error", message: err.message });
   }
 });
 
-app.get("/api/numbers/official", async (req, res) => {
+// ----------------------------------------------------
+// 4) LISTAR NÚMEROS OFICIAIS (GET /api/numbers/oficial)
+// (corrigido para 1 F)
+// ----------------------------------------------------
+app.get("/api/numbers/oficial", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM numbers WHERE status = 'oficial'");
     res.json(rows);

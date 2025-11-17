@@ -1,19 +1,34 @@
+// LoginAdmin.jsx
 import React, { useState } from "react";
 
 export default function LoginAdmin({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  function handleLogin() {
-    // Aqui você pode validar email/senha localmente ou via API
-    if (email === "admin@teste.com" && password === "123456") {
-      const adminData = {
-        id: 1,
-        email,
-      };
-      onLogin(adminData);
-    } else {
-      alert("Credenciais inválidas!");
+  async function handleLogin() {
+    console.log("Enviando para o backend:", { email, password });
+
+    try {
+      const res = await fetch("http://localhost:3002/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      console.log("Resposta do backend:", data);
+
+      if (data.success) {
+        onLogin({
+          id: data.id,
+          email: data.email,
+        });
+      } else {
+        alert(data.message || "Credenciais inválidas!");
+      }
+    } catch (err) {
+      console.error("Erro ao fazer login:", err);
+      alert("Erro ao conectar com o servidor.");
     }
   }
 
@@ -25,13 +40,20 @@ export default function LoginAdmin({ onLogin }) {
         type="email"
         placeholder="Email"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          console.log("Digitando email:", e.target.value);
+          setEmail(e.target.value);
+        }}
       />
+
       <input
         type="password"
         placeholder="Senha"
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e) => {
+          console.log("Digitando senha:", e.target.value);
+          setPassword(e.target.value);
+        }}
       />
 
       <button onClick={handleLogin}>Entrar</button>

@@ -4,7 +4,7 @@ const mysql = require('mysql2/promise');
 const pool = mysql.createPool({
   host: process.env.DB_ADMIN_HOST || 'localhost',
   user: process.env.DB_ADMIN_USER || 'root',
-  password: process.env.DB_ADMIN_PASS || 'senha',
+  password: process.env.DB_ADMIN_PASS || 'Biel10403923@',
   database: process.env.DB_ADMIN_NAME || 'safedial_admin',
   waitForConnections: true,
   connectionLimit: 10
