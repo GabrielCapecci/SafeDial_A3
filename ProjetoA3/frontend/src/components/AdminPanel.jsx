@@ -1,21 +1,32 @@
-// AdminPanel.jsx
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+// frontend/src/components/AdminPanel.jsx
+import React, { useEffect, useState } from "react";
+import { publicApi } from "../services/api";
 
-const BACKEND_URL = "http://localhost:3001"; // porta do backend
-
-export default function AdminPanel({ user }) {
+export default function AdminPanel({ adminData }) {
   const [phone, setPhone] = useState("");
-  const [bank, setBank] = useState("");
   const [oficialNumbers, setOficialNumbers] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  // Buscar números oficiais ao montar o componente
+  if (!adminData || !adminData.bank) {
+    return <h2>Acesso negado. Faça login novamente.</h2>;
+  }
+
+  const { bank } = adminData;
+  const bankNorm = bank.trim(); // Remove espaços extras
+
+  console.log("AdminData recebido no painel:", adminData);
+
+  // ======================================
+  // BUSCAR NÚMEROS OFICIAIS DO ADMIN PELO BANCO
+  // ======================================
   useEffect(() => {
     async function fetchOficialNumbers() {
       try {
-        const response = await publicApi.get("/api/numbers/oficial");
-        setOficialNumbers(Array.isArray(res.data) ? res.data : []);
+        console.log("Buscando números oficiais do banco:", bankNorm);
+        const response = await publicApi.get("/api/numbers/oficial", {
+          params: { bank: bankNorm },
+        });
+        console.log("Números oficiais recebidos:", response.data);
+        setOficialNumbers(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
         console.error("Erro ao buscar números oficiais:", err);
         setOficialNumbers([]);
@@ -23,82 +34,84 @@ export default function AdminPanel({ user }) {
     }
 
     fetchOficialNumbers();
-  }, []);
+  }, [bankNorm]);
 
-  // Submeter novo número oficial
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // ======================================
+  // CADASTRAR/ATUALIZAR NÚMERO
+  // ======================================
+  async function atualizarNumero() {
+    if (!phone) return alert("Preencha o campo número!");
 
-    if (!phone || !bank) {
-      alert("Preencha telefone e banco.");
-      return;
-    }
-
-    setLoading(true);
     try {
-      const res = await axios.post(`${BACKEND_URL}/admin/update-number`, { phone, bank });
-      if (res.data.success) {
-        alert("Número atualizado com sucesso!");
-        setPhone("");
-        setBank("");
+      const phoneNorm = phone.replace(/\D/g, ""); // Remove tudo que não for número
 
-        // Atualiza a lista de números oficiais sem duplicar
-        setOficialNumbers((prev) => {
-          // Remove número antigo se existir
-          const filtered = prev.filter((num) => num.phone !== phone);
-          // Adiciona o novo
-          return [...filtered, { phone, bank, status: "oficial", lastupdate: new Date().toISOString() }];
-        });
-      }
+      console.log("Enviando sync-oficial:", { phone: phoneNorm, bank: bankNorm });
+
+      await publicApi.post("/api/sync-oficial", {
+        phone: phoneNorm,
+        bank: bankNorm,
+      });
+
+      alert("Número oficial atualizado com sucesso!");
+
+      // Atualiza a tabela em tela
+      const response = await publicApi.get("/api/numbers/oficial", {
+        params: { bank: bankNorm },
+      });
+      setOficialNumbers(Array.isArray(response.data) ? response.data : []);
+      setPhone("");
     } catch (err) {
       console.error("Erro ao atualizar número oficial", err);
       alert("Erro ao atualizar número oficial");
-    } finally {
-      setLoading(false);
     }
-  };
+  }
 
   return (
     <div className="admin-panel">
-      <h2>Admin Panel</h2>
-      <p>Logado como: {user?.email || "Usuário desconhecido"}</p>
+      <h1>Painel Administrativo</h1>
+      <p>
+        <strong>Admin:</strong> {adminData.email}
+      </p>
+      <p>
+        <strong>Banco:</strong> {bankNorm}
+      </p>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Telefone:</label>
-          <input
-            type="text"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(00) 00000-0000"
-          />
-        </div>
-        <div>
-          <label>Banco:</label>
-          <input
-            type="text"
-            value={bank}
-            onChange={(e) => setBank(e.target.value)}
-            placeholder="Nome do banco"
-          />
-        </div>
-        <button type="submit" disabled={loading}>
-          {loading ? "Salvando..." : "Salvar número oficial"}
-        </button>
-      </form>
+      <h2>Cadastrar / Atualizar Número Oficial</h2>
+      <input
+        type="text"
+        placeholder="Número (ex: 11988887777)"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+      />
+      <button onClick={atualizarNumero}>Salvar</button>
 
-      <h3>Números Oficiais</h3>
-      <ul>
-        {Array.isArray(oficialNumbers) && oficialNumbers.length > 0 ? (
-          oficialNumbers.map((num) => (
-            <li key={num.phone}>
-              {num.phone} - {num.bank} (Última atualização: {num.lastupdate || "-"})
-            </li>
-          ))
-        ) : (
-          <li>Nenhum número oficial encontrado.</li>
-        )}
-      </ul>
+      <hr />
+
+      <h2>Meus Números Oficiais</h2>
+      {oficialNumbers.length === 0 ? (
+        <p>Nenhum número cadastrado ainda para este banco.</p>
+      ) : (
+        <table border="1">
+          <thead>
+            <tr>
+              <th>Telefone</th>
+              <th>Banco</th>
+              <th>Status</th>
+              <th>Última Atualização</th>
+            </tr>
+          </thead>
+          <tbody>
+            {oficialNumbers.map((n, index) => (
+              <tr key={index}>
+                <td>{n.phone}</td>
+                <td>{n.bank}</td>
+                <td>{n.status}</td>
+                <td>{n.lastUpdate}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

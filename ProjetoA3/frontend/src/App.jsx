@@ -1,21 +1,33 @@
-import React, { useState } from "react";
+// frontend/src/App.jsx
+import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import SearchBox from "./components/SearchBox";
 import ResultCard from "./components/ResultCard";
 import ReportForm from "./components/ReportForm";
 import LoginAdmin from "./components/LoginAdmin";
 import AdminPanel from "./components/AdminPanel";
-import { publicApi } from "./services/api";
+import { publicApi, adminApi } from "./services/api";
 
 export default function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [adminLogged, setAdminLogged] = useState(false);
-  const [adminData, setAdminData] = useState(null); // Armazena dados do admin logado
+  const [adminData, setAdminData] = useState(null);
 
   // =======================
-  // Usuário comum
+  // Carrega adminData do localStorage ao iniciar
+  // =======================
+  useEffect(() => {
+    const storedAdmin = JSON.parse(localStorage.getItem("adminData"));
+    if (storedAdmin && storedAdmin.bank) { // <-- trocado public_key por bank
+      setAdminData(storedAdmin);
+      setAdminLogged(true);
+    }
+  }, []);
+
+  // =======================
+  // Usuário comum: verificar número
   // =======================
   async function handleCheck(phone) {
     setLoading(true);
@@ -30,6 +42,9 @@ export default function App() {
     }
   }
 
+  // =======================
+  // Usuário comum: enviar report
+  // =======================
   async function handleReport(payload) {
     try {
       await publicApi.post("/api/report", payload);
@@ -41,11 +56,21 @@ export default function App() {
   }
 
   // =======================
-  // Admin
+  // Admin login
   // =======================
   function handleAdminLogin(adminInfo) {
-    setAdminData(adminInfo); // Recebe {id, email} do LoginAdmin
+    setAdminData(adminInfo);
     setAdminLogged(true);
+    localStorage.setItem("adminData", JSON.stringify(adminInfo));
+  }
+
+  // =======================
+  // Logout admin
+  // =======================
+  function handleAdminLogout() {
+    setAdminData(null);
+    setAdminLogged(false);
+    localStorage.removeItem("adminData");
   }
 
   return (
@@ -60,21 +85,29 @@ export default function App() {
           <ResultCard data={result} onReport={() => setShowReport(true)} />
         )}
 
-        {showReport && (
+        {showReport && result && (
           <ReportForm
-            phone={result?.phone}
+            phone={result.phone}
             onCancel={() => setShowReport(false)}
             onSubmit={handleReport}
           />
         )}
 
         {/* Admin */}
-        {!adminLogged && <LoginAdmin onLogin={handleAdminLogin} />}
+        {!adminLogged && (
+          <LoginAdmin onLoginSuccess={handleAdminLogin} />
+        )}
+
         {adminLogged && adminData && (
           <div>
-            <p>Bem-vindo, {adminData.email}</p>
-            <p>Você está logado como administrador.</p>
-            <AdminPanel />
+            <p>
+              Bem-vindo, <strong>{adminData.email}</strong>
+            </p>
+            <p>
+              Banco: <strong>{adminData.bank}</strong>
+            </p>
+            <button onClick={handleAdminLogout}>Logout</button>
+            <AdminPanel adminData={adminData} />
           </div>
         )}
       </main>

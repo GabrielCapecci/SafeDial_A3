@@ -1,7 +1,7 @@
 // public-api/server.js
 import express from "express";
 import cors from "cors";
-import db from "./db.js";
+import db from "./db.js"; // Assumindo que ./db.js exporta o pool mysql2/promise
 
 const app = express();
 app.use(cors());
@@ -23,7 +23,6 @@ app.get("/api/numbers/:phone", async (req, res) => {
     const phoneNorm = normalizePhone(phoneParam);
 
     const [rows] = await db.query("SELECT * FROM numbers");
-
     const found = rows.find(r => normalizePhone(r.phone) === phoneNorm);
 
     if (!found) {
@@ -31,7 +30,7 @@ app.get("/api/numbers/:phone", async (req, res) => {
         status: "desconhecido",
         phone: phoneParam,
         bank: "-",
-        reports: 0
+        reports: 0,
       });
     }
 
@@ -40,10 +39,10 @@ app.get("/api/numbers/:phone", async (req, res) => {
       bank: found.bank || "-",
       status: (found.status || "desconhecido").toLowerCase(),
       reports: found.reports || 0,
-      lastUpdate: found.lastUpdate || null
+      lastUpdate: found.lastUpdate || null,
     });
   } catch (err) {
-    console.error("Erro GET /numbers:", err);
+    console.error("Erro GET /numbers/:phone:", err);
     return res.status(500).json({ status: "error", message: err.message });
   }
 });
@@ -59,21 +58,18 @@ app.post("/api/report", async (req, res) => {
     const phoneNorm = normalizePhone(phone);
     const date = new Date();
 
-    await db.query("INSERT INTO reports (phone, description, date) VALUES (?, ?, ?)", [
-      phoneNorm,
-      description || "",
-      date
-    ]);
+    await db.query(
+      "INSERT INTO reports (phone, description, date) VALUES (?, ?, ?)",
+      [phoneNorm, description || "", date]
+    );
 
     await db.query(
-      `
-      INSERT INTO numbers (phone, bank, status, reports, lastUpdate)
-      VALUES (?, '-', 'suspeito', 1, ?)
-      ON DUPLICATE KEY UPDATE
-        reports = reports + 1,
-        status = IF(reports + 1 >= 3, 'suspeito', status),
-        lastUpdate = VALUES(lastUpdate)
-      `,
+      `INSERT INTO numbers (phone, bank, status, reports, lastUpdate)
+       VALUES (?, '-', 'suspeito', 1, ?)
+       ON DUPLICATE KEY UPDATE
+         reports = reports + 1,
+         status = IF(reports + 1 >= 3, 'suspeito', status),
+         lastUpdate = VALUES(lastUpdate)`,
       [phoneNorm, date]
     );
 
@@ -86,45 +82,53 @@ app.post("/api/report", async (req, res) => {
 
 // ----------------------------------------------------
 // 3) SYNC DO ADMIN (POST /api/sync-oficial)
-// (corrigido para "oficial" com 1 F)
 // ----------------------------------------------------
 app.post("/api/sync-oficial", async (req, res) => {
   try {
     const { phone, bank } = req.body;
-    if (!phone) return res.status(400).json({ error: "phone required" });
+    if (!phone || !bank) 
+      return res.status(400).json({ error: "phone e bank são obrigatórios" });
 
     const phoneNorm = normalizePhone(phone);
     const date = new Date();
 
     await db.query(
-      `
-      INSERT INTO numbers (phone, bank, status, reports, lastUpdate)
-      VALUES (?, ?, 'oficial', 0, ?)
-      ON DUPLICATE KEY UPDATE
-        bank = VALUES(bank),
-        status = 'oficial',
-        lastUpdate = VALUES(lastUpdate)
-      `,
-      [phoneNorm, bank || "-", date]
+      `INSERT INTO numbers (phone, bank, status, reports, lastUpdate)
+       VALUES (?, ?, 'oficial', 0, ?)
+       ON DUPLICATE KEY UPDATE
+         bank = VALUES(bank),
+         status = 'oficial',
+         lastUpdate = VALUES(lastUpdate)`,
+      [phoneNorm, bank, date]
     );
 
-    return res.json({ success: true });
+    res.json({ success: true });
   } catch (err) {
-    console.error("Erro POST /sync-oficial:", err);
-    return res.status(500).json({ error: "server error", message: err.message });
+    console.error("Erro na query /sync-oficial:", err);
+    res.status(500).json({ error: "server error", message: err.message });
   }
 });
 
 // ----------------------------------------------------
-// 4) LISTAR NÚMEROS OFICIAIS (GET /api/numbers/oficial)
-// (corrigido para 1 F)
+// 4) LISTAR NÚMEROS OFICIAIS COM FILTROS
+// GET /api/numbers/oficial?bank=xxx
 // ----------------------------------------------------
 app.get("/api/numbers/oficial", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM numbers WHERE status = 'oficial'");
+    const { bank } = req.query;
+
+    let query = "SELECT * FROM numbers WHERE status = 'oficial'";
+    const params = [];
+
+    if (bank) {
+      query += " AND bank = ?";
+      params.push(bank);
+    }
+
+    const [rows] = await db.query(query, params);
     res.json(rows);
   } catch (err) {
-    console.error(err);
+    console.error("Erro GET /numbers/oficial:", err);
     res.status(500).json({ message: "Erro ao buscar números oficiais" });
   }
 });

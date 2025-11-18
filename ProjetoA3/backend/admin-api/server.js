@@ -1,97 +1,83 @@
-// server.js
-const express = require("express");
-const mysql = require("mysql2/promise");
-const cors = require("cors");
+import express from "express";
+import cors from "cors";
+import mysql from "mysql2/promise";
+import axios from "axios";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Conexão MySQL
-const db = mysql.createPool({
+const db = await mysql.createPool({
   host: "localhost",
   user: "root",
-  password: "Biel10403923@",
+  password: "Biel10403923@", 
   database: "safedial_admin",
 });
 
-// ================================
-// LOGIN ADMIN
-// ================================
+// Login admin
 app.post("/admin/login", async (req, res) => {
-  console.log("BODY RECEBIDO:", req.body); // <---- MOSTRA O QUE CHEGA DO FRONT
-
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ message: "Credenciais incompletas" });
-  }
-
   try {
+    const { email, password } = req.body;
+
     const [rows] = await db.query(
-      "SELECT id, email FROM admins WHERE email = ? AND password = ? AND isActive = 'Sim'",
+      "SELECT * FROM admins WHERE email = ? AND password = ?",
       [email, password]
     );
 
-    if (rows.length === 0) {
-      return res.status(401).json({
-        message: "Credenciais inválidas ou usuário inativo",
-      });
-    }
+    console.log(">>> ADMIN DO BANCO:", rows[0]); // <-- ADICIONE ISSO
+
+    if (rows.length === 0) return res.json({ success: false });
 
     const admin = rows[0];
-    res.json({ success: true, id: admin.id, email: admin.email });
+
+    res.json({
+      success: true,
+      email: admin.email,
+      bank: admin.bank, // SE rows[0].bank existir, aqui NÃO será undefined
+    });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Erro interno no servidor" });
+    res.status(500).json({ success: false });
   }
 });
 
-// ================================
-// Rotas de números oficiais
-// ================================
-app.get("/numbers/oficial", async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      "SELECT phone, bank, status, lastupdate FROM numbers WHERE status = 'oficial'"
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erro ao buscar números" });
-  }
-});
-
+// Atualizar número oficial
 app.post("/admin/update-number", async (req, res) => {
-  const { phone, bank } = req.body;
-  if (!phone || !bank)
-    return res.status(400).json({ message: "Dados incompletos" });
-
   try {
-    const [rows] = await db.query("SELECT * FROM numbers WHERE phone = ?", [
-      phone,
-    ]);
+    const { phone, bank } = req.body;
+    if (!phone || !bank) return res.status(400).json({ success: false });
 
-    if (rows.length === 0) {
-      await db.query(
-        "INSERT INTO numbers (phone, bank, status, reports, lastupdate) VALUES (?, ?, 'oficial', 0, NOW())",
-        [phone, bank]
-      );
-    } else {
-      await db.query(
-        "UPDATE numbers SET status = 'oficial', bank = ?, lastupdate = NOW() WHERE phone = ?",
-        [bank, phone]
-      );
-    }
+    const phoneNorm = phone.replace(/\D/g, "");
+
+    await axios.post("http://localhost:3001/api/sync-oficial", {
+      phone: phoneNorm,
+      bank,
+    });
 
     res.json({ success: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Erro ao atualizar número" });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Inicializa servidor
-const PORT = 3002;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+// Buscar números oficiais do banco do admin
+app.get("/numbers/oficial", async (req, res) => {
+  try {
+    const { bank } = req.query;
+    if (!bank) return res.status(400).json({ error: "bank obrigatório" });
+
+    const [rows] = await db.query(
+      "SELECT * FROM numbers WHERE status = 'oficial' AND bank = ?",
+      [bank]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error", message: err.message });
+  }
+});
+
+const PORT = process.env.ADMIN_API_PORT || 3002;
+app.listen(PORT, () => console.log(`admin-api rodando: http://localhost:${PORT}`));

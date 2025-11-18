@@ -1,62 +1,56 @@
-// LoginAdmin.jsx
 import React, { useState } from "react";
+import { adminApi } from "../services/api";
 
-export default function LoginAdmin({ onLogin }) {
+export default function LoginAdmin({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  async function handleLogin() {
-    console.log("Enviando para o backend:", { email, password });
+  async function handleLogin(e) {
+    e.preventDefault();
+    setError("");
 
     try {
-      const res = await fetch("http://localhost:3002/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const res = await adminApi.post("/admin/login", { email, password });
 
-      const data = await res.json();
-      console.log("Resposta do backend:", data);
-
-      if (data.success) {
-        onLogin({
-          id: data.id,
-          email: data.email,
-        });
-      } else {
-        alert(data.message || "Credenciais inválidas!");
+      if (!res.data.success) {
+        setError("Login inválido");
+        return;
       }
+
+      const adminInfo = {
+        email: res.data.email,
+        bank: res.data.bank, // pega o banco do servidor
+      };
+
+      onLoginSuccess(adminInfo);
     } catch (err) {
       console.error("Erro ao fazer login:", err);
-      alert("Erro ao conectar com o servidor.");
+      setError("Erro ao conectar com o servidor");
     }
   }
 
   return (
     <div className="login-admin">
-      <h2>Login Administrador</h2>
-
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => {
-          console.log("Digitando email:", e.target.value);
-          setEmail(e.target.value);
-        }}
-      />
-
-      <input
-        type="password"
-        placeholder="Senha"
-        value={password}
-        onChange={(e) => {
-          console.log("Digitando senha:", e.target.value);
-          setPassword(e.target.value);
-        }}
-      />
-
-      <button onClick={handleLogin}>Entrar</button>
+      <h2>Login Admin</h2>
+      <form onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Senha"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <button type="submit">Login</button>
+      </form>
+      {error && <p style={{ color: "red" }}>{error}</p>}
     </div>
   );
 }
